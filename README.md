@@ -4,12 +4,12 @@ A homebrew Q*Bert for the SNK Neo Geo Pocket Color.
 
 **v0.4 — Demo Release** · Studio So Not Kansai
 
-![Title screen](title.png)
+![Title screen](screenshots/title.png)
 
 Light every cube. Dodge the balls. Do not let Coily catch you. If things
 get dicey, hop off the edge onto a flying disc.
 
-![Gameplay](gameplay.png)
+![Gameplay](screenshots/gameplay.png)
 
 ---
 
