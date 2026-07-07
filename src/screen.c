@@ -8,29 +8,30 @@
  * NGPC RGB444. Level N uses scheme (N-1) mod NUM_SCHEMES.
  */
 static const u16 schemes[NUM_SCHEMES][5] = {
+    /* Faces deliberately darker than every top so the diamonds pop */
     /* 1: green faces, blue -> brown -> yellow */
-    { RGB(0,4,0),  RGB(0,9,2),  RGB(0,4,15),  RGB(11,6,2),  RGB(12,12,0) },
+    { RGB(0,4,0),  RGB(0,6,1),  RGB(0,5,15),  RGB(11,6,2),  RGB(13,13,0) },
     /* 2: teal faces, violet -> pink -> yellow */
-    { RGB(5,10,9), RGB(3,4,4),  RGB(5,4,14),  RGB(15,6,6),  RGB(13,13,0) },
+    { RGB(3,7,6),  RGB(2,3,3),  RGB(6,5,15),  RGB(15,6,6),  RGB(13,13,0) },
     /* 3: brown/orange faces, blue -> green -> cream */
-    { RGB(6,3,0),  RGB(15,7,2), RGB(0,4,13),  RGB(2,11,3),  RGB(14,13,7) },
-    /* 4: grey faces, blue -> grey -> light cyan */
-    { RGB(7,7,7),  RGB(2,2,2),  RGB(2,6,12),  RGB(4,4,4),   RGB(11,12,12) },
+    { RGB(6,3,0),  RGB(9,4,1),  RGB(0,5,14),  RGB(2,12,3),  RGB(14,13,7) },
+    /* 4: grey faces, blue -> mid grey -> light cyan */
+    { RGB(6,6,6),  RGB(2,2,2),  RGB(2,7,13),  RGB(9,9,9),   RGB(12,13,13) },
     /* 5: slate/navy faces, blue -> magenta -> olive */
-    { RGB(7,8,8),  RGB(0,0,9),  RGB(0,6,14),  RGB(9,0,6),   RGB(10,11,0) },
+    { RGB(5,6,6),  RGB(0,0,7),  RGB(0,7,15),  RGB(11,0,8),  RGB(11,12,0) },
     /* 6: khaki/navy faces, sage -> salmon -> cyan */
-    { RGB(11,11,2),RGB(0,3,9),  RGB(4,6,5),   RGB(15,5,5),  RGB(0,10,13) },
+    { RGB(8,8,1),  RGB(0,3,7),  RGB(5,7,6),   RGB(15,5,5),  RGB(0,11,14) },
     /* 7: khaki/red faces, navy -> blue -> purple */
-    { RGB(11,11,2),RGB(11,3,3), RGB(0,3,9),   RGB(2,8,12),  RGB(8,0,7) },
+    { RGB(8,8,1),  RGB(8,2,2),  RGB(0,3,10),  RGB(3,9,13),  RGB(10,0,9) },
     /* 8: teal faces, yellow -> violet -> pink */
-    { RGB(5,10,9), RGB(3,4,4),  RGB(13,13,0), RGB(5,4,14),  RGB(15,6,6) },
+    { RGB(3,7,6),  RGB(2,3,3),  RGB(13,13,0), RGB(6,5,15),  RGB(15,6,6) },
     /* 9: green faces, brown -> yellow -> blue */
-    { RGB(0,4,0),  RGB(0,9,2),  RGB(11,6,2),  RGB(12,12,0), RGB(0,4,15) }
+    { RGB(0,4,0),  RGB(0,6,1),  RGB(11,6,2),  RGB(13,13,0), RGB(0,5,15) }
 };
 
 /* Konami-code Mello Yello scheme: can colours */
 static const u16 mello_scheme[5] = {
-    RGB(0,8,0), RGB(0,4,0), RGB(0,6,0), RGB(13,12,0), RGB(15,1,2)
+    RGB(0,5,0), RGB(0,3,0), RGB(0,9,1), RGB(13,12,0), RGB(15,1,2)
 };
 
 static const u16 *cur_scheme(void) {
@@ -57,6 +58,8 @@ void setup_palettes(void) {
     SetPalette(SPRITE_PLANE, SPAL_BALL,   0, RGB(15,1,2),  RGB(15,10,10), RGB(7,0,0));
     SetPalette(SPRITE_PLANE, SPAL_COILY,  0, RGB(11,0,11), RGB(15,15,15), RGB(5,0,5));
     SetPalette(SPRITE_PLANE, SPAL_BUBBLE, 0, RGB(15,1,2),  RGB(15,15,15), RGB(1,1,1));
+    SetPalette(SPRITE_PLANE, SPAL_BIGTXT, 0, RGB(13,13,0), RGB(15,1,2),  RGB(0,0,0));
+    SetPalette(SPRITE_PLANE, SPAL_DISC,   0, RGB(12,12,12),RGB(15,15,15), RGB(6,2,10));
 }
 
 /* Flash the target-colour palette during level clear */
@@ -102,6 +105,36 @@ void arc_print(u8 x, u8 y, const char *s) {
         cx = cx + 2;
         s++;
     }
+}
+
+/* ---- Sprite text: transparent big text over the playfield ----
+ * Installs each string's glyphs into the T_SPRTXT tile window (12 glyph
+ * slots) and draws them as sprites. Returns the number of sprites used. */
+u8 sprite_text(u8 base, u8 x, u8 y, const char *str) {
+    u16 t, dt;
+    u8 n, slot, cx;
+    n = 0; slot = 0; cx = x;
+    while (*str) {
+        t = glyph_of(*str);
+        if (t && slot < 12) {
+            dt = (u16)(T_SPRTXT + (slot << 2));
+            InstallTileSetAt((const unsigned short (*)[8])afont[(t - T_AFONT)], 32, dt);
+            SetSprite((u8)(base+n),   dt,   0, cx,        y,        SPAL_BIGTXT);
+            SetSprite((u8)(base+n+1), dt+1, 0, (u8)(cx+8), y,        SPAL_BIGTXT);
+            SetSprite((u8)(base+n+2), dt+2, 0, cx,        (u8)(y+8), SPAL_BIGTXT);
+            SetSprite((u8)(base+n+3), dt+3, 0, (u8)(cx+8), (u8)(y+8), SPAL_BIGTXT);
+            n = (u8)(n + 4);
+            slot = slot + 1;
+        }
+        cx = (u8)(cx + 16);
+        str++;
+    }
+    return n;
+}
+
+void hide_sprite_text(u8 base, u8 n) {
+    u8 i;
+    for (i = 0; i < n; i++) UnsetSprite((u8)(base + i));
 }
 
 /* Print a single big glyph (initials entry) */

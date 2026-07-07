@@ -47,6 +47,13 @@ static u8  spawn_timer;
 static s16 bq_x;              /* bonus-screen Q*Bert x */
 static u8  bq_phase;
 
+/* Flying discs: index 0 = left of pyramid, 1 = right */
+static u8 disc_on[2];
+static u8 disc_gr[2];         /* grid row the disc floats beside      */
+static u8 disc_ride;          /* 0/1: which disc Q is riding, +1; 0=none */
+static s8 lure_r, lure_c;     /* cell Q jumped toward, for Coily bait */
+static u8 hop_alt;            /* rotates hop sound variants           */
+
 /* Per-level rules (index level-1, capped at 9):
  * adv2: cubes need two hops (via mid state); revert: what a target cube
  * does when hopped again: 0=nothing, 1=back to start, 2=back one step */
@@ -147,6 +154,38 @@ static void draw_bubble_at(s16 x, s16 y) {
 
 static void hide_bubble(void) { hide_group(SPR_BUBBLE, 8); }
 
+static u16 disc_x(u8 i) {
+    if (i == 0) return (u16)(56 - ((u16)disc_gr[0] << 3));
+    return (u16)(88 + ((u16)disc_gr[1] << 3));
+}
+
+static u16 disc_y(u8 i) {
+    return cube_y(disc_gr[i]);
+}
+
+static void draw_disc16x8(u8 base, s16 x, s16 y) {
+    u8 px, py;
+    if (x < 0 || y < 0 || x > 144 || y > 148) { hide_group(base, 2); return; }
+    px = (u8)x; py = (u8)y;
+    SetSprite(base,          T_DISC,   0, px,        py, SPAL_DISC);
+    SetSprite((u8)(base+1), T_DISC+1, 0, (u8)(px+8), py, SPAL_DISC);
+}
+
+static void draw_discs(void) {
+    u8 i, base;
+    for (i = 0; i < 2; i++) {
+        base = (u8)(SPR_DISC + (i << 1));
+        if (disc_ride == (u8)(i + 1)) {
+            /* ridden disc travels under Q*Bert */
+            draw_disc16x8(base, q_px, q_py + 16);
+        } else if (disc_on[i]) {
+            draw_disc16x8(base, (s16)disc_x(i), (s16)disc_y(i));
+        } else {
+            hide_group(base, 2);
+        }
+    }
+}
+
 static void draw_qbert(void) {
     u16 tile;
     s16 dy;
@@ -207,6 +246,7 @@ static void reset_positions(void) {
     }
     coily_alive = 0;
     spawn_timer = 100;
+    disc_ride = 0;
 }
 
 void start_level(void) {
@@ -215,6 +255,10 @@ void start_level(void) {
         for (c = 0; c < 7; c++) cube_st[r][c] = 0;
     }
     lit_count = 0;
+    disc_on[0] = 1;
+    disc_on[1] = 1;
+    disc_gr[0] = (u8)(1 + cheap_rand(4));
+    disc_gr[1] = (u8)(1 + cheap_rand(4));
     fresh_screen();
     draw_pyramid();
     draw_hud();
@@ -251,7 +295,7 @@ static void kill_qbert(u8 fell) {
         PlaySound(SND_DEATH);
         q_state = Q_IDLE;
         bubble_on = 1;
-        draw_bubble_at(q_px + 8, q_py - 18);
+        draw_bubble_at(q_px - 8, q_py - 18);
         death_timer = 70;
     }
 }
@@ -262,8 +306,8 @@ static void after_death(void) {
     bubble_on = 0;
     if (lives == 0) {
         clear_sprites();
-        arc_print(1, 8, "GAME OVER");
-        PrintString(SCR_1_PLANE, PAL_TEXT, 3, 12, "PRESS A BUTTON");
+        sprite_text(0, 16, 60, "GAME OVER");
+        PrintString(SCR_1_PLANE, PAL_TEXT, 3, 17, "PRESS A BUTTON");
         state = STATE_OVER;
         skip = 20;
         return;
@@ -385,7 +429,11 @@ static void q_begin_hop(s8 nr, s8 nc) {
         else { q_sx = 1; q_pose = POSE_UR; }
         q_sy = -2;
     }
-    PlaySound(SND_HOP);
+    hop_alt = hop_alt + 1;
+    if (hop_alt >= 3) hop_alt = 0;
+    if (hop_alt == 0) PlaySound(SND_HOP);
+    else if (hop_alt == 1) PlaySound(SND_HOP2);
+    else PlaySound(SND_HOP3);
 }
 
 static void q_input(void) {
@@ -424,9 +472,48 @@ static void q_update(void) {
                 if (state != STATE_GAME) return;
                 check_collisions();
             } else {
-                q_state = Q_FALL;
-                PlaySound(SND_FALL);
+                /* off the pyramid: is there a disc at that spot? */
+                u8 di, caught;
+                caught = 0;
+                for (di = 0; di < 2; di++) {
+                    if (!disc_on[di]) continue;
+                    if (q_nr != (s8)disc_gr[di]) continue;
+                    if (di == 0 && q_nc == -1) caught = 1;
+                    if (di == 1 && q_nc == (s8)(disc_gr[1] + 1)) caught = 1;
+                    if (caught) {
+                        disc_ride = (u8)(di + 1);
+                        lure_r = q_nr;
+                        lure_c = q_nc;
+                        q_px = (s16)disc_x(di);
+                        q_py = (s16)disc_y(di) - 16;
+                        q_state = Q_RIDE;
+                        PlaySound(SND_DISC);
+                        break;
+                    }
+                }
+                if (!caught) {
+                    q_state = Q_FALL;
+                    PlaySound(SND_FALL);
+                }
             }
+        }
+    } else if (q_state == Q_RIDE) {
+        /* glide up beside the pyramid to above the summit */
+        if (q_px < 72) q_px = q_px + 1;
+        else if (q_px > 72) q_px = q_px - 1;
+        if (q_py > -4) q_py = q_py - 1;
+        if (q_px == 72 && q_py <= -4) {
+            u8 di;
+            di = (u8)(disc_ride - 1);
+            disc_on[di] = 0;
+            disc_ride = 0;
+            q_r = 0; q_c = 0;
+            snap_q();
+            q_state = Q_IDLE;
+            q_rest = 6;
+            land_on_cube();
+            if (state != STATE_GAME) return;
+            check_collisions();
         }
     } else if (q_state == Q_FALL) {
         q_py = q_py + 5;
@@ -482,9 +569,30 @@ static void spawn_enemy(void) {
 }
 
 static void coily_choose(u8 i) {
-    s8 r, c, nr, nc;
+    s8 r, c, nr, nc, tr, tc;
     r = (s8)e_r[i];
     c = (s8)e_c[i];
+    /* when Q*Bert is riding a disc, Coily blindly chases the bait cell */
+    if (q_state == Q_RIDE) {
+        tr = lure_r;
+        tc = lure_c;
+        if (tr < r) {
+            nr = r - 1;
+            if (tc >= c) nc = c;
+            else nc = c - 1;
+        } else if (tr > r) {
+            nr = r + 1;
+            if (tc > c) nc = c + 1;
+            else nc = c;
+        } else {
+            nr = r - 1;
+            if (tc >= c) nc = c;
+            else nc = c - 1;
+        }
+        /* no board clamp: over the edge he goes */
+        e_begin_hop(i, nr, nc);
+        return;
+    }
     if ((s8)q_r < r) {
         nr = r - 1;
         if ((s8)q_c >= c) nc = c;
@@ -524,6 +632,10 @@ static void e_update(void) {
         if (e_fall[i]) {
             e_py[i] = e_py[i] + 5;
             if (e_py[i] > 160) {
+                if (e_type[i] == E_COILY) {
+                    add_score(500);
+                    coily_alive = 0;
+                }
                 if (e_type[i] == E_EGG) coily_alive = 0;
                 e_type[i] = E_NONE;
             }
@@ -550,6 +662,7 @@ static void e_update(void) {
                     check_collisions();
                 } else {
                     e_fall[i] = 1;
+                    if (e_type[i] == E_COILY) PlaySound(SND_LURE);
                 }
             }
             continue;
@@ -582,6 +695,7 @@ void game_update(void) {
         }
         draw_qbert();
         draw_enemies();
+        draw_discs();
         return;
     }
 
@@ -598,4 +712,5 @@ void game_update(void) {
 
     draw_qbert();
     draw_enemies();
+    draw_discs();
 }

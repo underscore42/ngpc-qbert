@@ -13,6 +13,7 @@
 #include "save.h"
 
 static u8 paused;
+static u8 pause_n;
 
 /* Initials entry state */
 static u8 entry_letters[3];
@@ -143,10 +144,9 @@ void main(void) {
             if (pad_press & J_OPTION) {
                 paused = paused ^ 1;
                 if (paused) {
-                    PrintString(SCR_1_PLANE, PAL_TEXT, 7, 9, "PAUSED");
+                    pause_n = sprite_text(SPR_PAUSE, 32, 64, "PAUSED");
                 } else {
-                    PrintString(SCR_1_PLANE, PAL_TEXT, 7, 9, "      ");
-                    draw_pyramid();
+                    hide_sprite_text(SPR_PAUSE, pause_n);
                 }
             }
             if (!paused) game_update();

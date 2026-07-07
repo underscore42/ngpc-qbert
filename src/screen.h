@@ -8,6 +8,8 @@ void setup_palettes(void);
 void flash_target_palette(u8 bright);
 void arc_print(u8 x, u8 y, const char *s);
 void arc_char(u8 x, u8 y, char ch);
+u8 sprite_text(u8 base, u8 x, u8 y, const char *str);
+void hide_sprite_text(u8 base, u8 n);
 void draw_cube(u8 r, u8 c);
 void draw_cube_top(u8 r, u8 c);
 void draw_pyramid(void);

@@ -26,6 +26,8 @@
 #define SPAL_BALL   2
 #define SPAL_COILY  3
 #define SPAL_BUBBLE 4
+#define SPAL_BIGTXT 5
+#define SPAL_DISC   6
 
 /* ---- Sounds (1-based for PlaySound) ---- */
 #define SND_HOP   1
@@ -34,11 +36,16 @@
 #define SND_DEATH 4
 #define SND_CLEAR 5
 #define SND_EHOP  6
+#define SND_HOP2  7
+#define SND_HOP3  8
+#define SND_DISC  9
+#define SND_LURE  10
 
 /* ---- Q*Bert states ---- */
 #define Q_IDLE 0
 #define Q_HOP  1
 #define Q_FALL 2
+#define Q_RIDE 3
 
 /* ---- Poses ---- */
 #define POSE_DL 0
@@ -57,10 +64,13 @@
 #define NUM_SCHEMES 9
 
 /* ---- Sprite slot layout ---- */
-/* Q*Bert 16x16: sprites 0-3; enemy slot i: 4+6*i (6 each); bubble: 22-29 */
+/* Q*Bert 16x16: sprites 0-3; enemy slot i: 4+6*i (6 each); bubble: 22-29;
+ * discs: 30-33; pause sprite-text: 34+ */
 #define SPR_Q      0
 #define SPR_ENEMY  4
 #define SPR_BUBBLE 22
+#define SPR_DISC   30
+#define SPR_PAUSE  34
 
 /* ---- Shared state (defined in game.c) ---- */
 extern u8  state, skip;

@@ -246,6 +246,11 @@ const u16 cube_cap[2][8] = {
     { 0xFFFF, 0xFFF0, 0xFF00, 0xF000, 0x0000, 0x0000, 0x0000, 0x0000 },
 };
 
+const u16 disc_s[2][8] = {
+    { 0x0000, 0x0055, 0x056A, 0x16AA, 0x1FFF, 0x07FF, 0x007F, 0x0000 },
+    { 0x0000, 0x5500, 0xA950, 0xAA94, 0xFFF4, 0xFFD0, 0xFD00, 0x0000 },
+};
+
 void install_tiles(void) {
     InstallTileSetAt((const unsigned short (*)[8])qb_dl,   32, T_QB_DL);
     InstallTileSetAt((const unsigned short (*)[8])qb_dr,   32, T_QB_DR);
@@ -258,6 +263,7 @@ void install_tiles(void) {
     InstallTileSetAt((const unsigned short (*)[8])cube_fill,16, T_CUBE+2);
     InstallTileSetAt((const unsigned short (*)[8])cube_body,16, T_CUBE+4);
     InstallTileSetAt((const unsigned short (*)[8])cube_cap, 16, T_CUBE+6);
+    InstallTileSetAt((const unsigned short (*)[8])disc_s,   16, T_DISC);
     InstallTileSetAt((const unsigned short (*)[8])can_t,    96, T_CAN);
     InstallTileSetAt((const unsigned short (*)[8])afont,  1216, T_AFONT);
 }
